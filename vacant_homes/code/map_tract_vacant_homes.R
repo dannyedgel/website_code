@@ -35,7 +35,7 @@ library(albersusa)
 #library(leaflet)
 
 ### set Census api key
-key <- '4b24646e184003d35b4f815066372760da7fe2d4'
+key <- ''
 census_api_key(key)
 
 ###_________________________________________________________________________________
