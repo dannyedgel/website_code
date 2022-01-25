@@ -108,6 +108,16 @@ app <- shinyApp(
     # set color palette
     pal <- reactive({hcl.colors(length(breaks()), 'Inferno', rev = TRUE,
                                 alpha = 0.7)})
+    
+    # define legend title
+    ltitle <- reactive({
+      if (input$metric == 'Total Vacant Homes'){
+        '"Other" Vacant Homes\n(ACS variable B025004_008E)'
+      }else{
+        paste0('"Other" Vacant Homes per 1,000 residents\n',
+               '(B025004_008E/B01001_001E)*1000')
+      }
+    })
       
       
     
@@ -123,7 +133,7 @@ app <- shinyApp(
                         labels = labs(),
                         guide = guide_legend(direction = 'horizonal',
                                             nrow = 1,
-                                            title = 'Vacant Homes',
+                                            title = ltitle(),
                                             title.position = 'left')) + 
       theme(legend.position = 'bottom',
             axis.text.x      = element_blank(),
