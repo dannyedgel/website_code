@@ -35,7 +35,7 @@ library(albersusa)
 #library(leaflet)
 
 ### set Census api key
-key <- ''
+key <- '4b24646e184003d35b4f815066372760da7fe2d4'
 census_api_key(key)
 
 ###_________________________________________________________________________________
@@ -80,6 +80,11 @@ for (x in subsample$GEOID){
   tr <- tigris::tracts(state  = substr(x, 1, 2),
                        county = substr(x, 3, 5),
                        year   = 2019)
+  
+  
+  # if a tract's water area is >95% of the total, remove it
+  tr <- tr[tr$ALAND/(tr$ALAND + tr$AWATER) >= 0.05, ]
+  
   df <- get_acs('tract',
                 state     = substr(x, 1, 2),
                 county    = substr(x, 3, 5),
@@ -91,6 +96,7 @@ for (x in subsample$GEOID){
   df$county.fips <- x
   
   dat.list[[i]] <- merge(tr, df, by = 'GEOID')
+  
   i <- i + 1
 }
 
