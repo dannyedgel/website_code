@@ -80,6 +80,16 @@ for (x in subsample$GEOID){
   tr <- tigris::tracts(state  = substr(x, 1, 2),
                        county = substr(x, 3, 5),
                        year   = 2019)
+  
+  
+  # if a tract's water area is >95% of the total, remove it
+  tr <- tr[tr$ALAND/(tr$ALAND + tr$AWATER) >= 0.05, ]
+  
+  # remove Catalina Island tracts from LA county
+  if (x == '06037'){
+    tr <- tr %>% filter(!(TRACTCE %in% c('599100', '599000')))
+  }
+  
   df <- get_acs('tract',
                 state     = substr(x, 1, 2),
                 county    = substr(x, 3, 5),
@@ -91,6 +101,7 @@ for (x in subsample$GEOID){
   df$county.fips <- x
   
   dat.list[[i]] <- merge(tr, df, by = 'GEOID')
+  
   i <- i + 1
 }
 
