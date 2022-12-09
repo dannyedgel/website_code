@@ -40,15 +40,17 @@ def manipulate_streaming_data(df):
 def plot_normalized_minutes(df, cutoff=.5):
     df = df[df.groupby("artistName")["cum_norm"].transform("max") >= cutoff]
     df.sort_values(["artistName", "date"])
-    df["date"] = pd.to_datetime(df["date"], infer_datetime_format=True)
+    df.index = pd.to_datetime(df["date"], infer_datetime_format=True)
+    
 
     fig, ax = plt.subplots(figsize=(15, 7.5))
     for x in df["artistName"].drop_duplicates().to_list():
-        ax.plot(df[df["artistName"].isin([x])]["date"], df[df["artistName"].isin([x])]["cum_norm"], label=x)
+        ax.plot(df[df["artistName"].isin([x])]["cum_norm"], label=x)
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%b'))
-    ax.xaxis.set_minor_formatter(mdates.DateFormatter('%b'))
-    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),
-            fancybox=True, shadow=True, ncol=9, title='Artist')
+    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
+    ax.set_ylabel('Minutes normalized by top artist minutes')
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), frameon=False, fancybox=True, shadow=True, 
+              ncol=9, title='Artist')
     plt.savefig('../output/2022_streaming_artists.png', bbox_inches='tight')
 
 # main function
@@ -57,11 +59,11 @@ def main():
     df = manipulate_streaming_data(load_streaming_data())
     
     # print names of artists that were ever top throughout the year
-    print("Artists that were ever top artist:\n")
+    print("\nArtists that were ever top artist:")
     print(df["top_artist"].drop_duplicates().to_list())
     
     # repeat with artists that ever reached 80% of the top artist
-    print("Artists that ever reached 80% of the top artist:\n")
+    print("\nArtists that ever reached 80% of the top artist:")
     print(df[df["cum_norm"] >= 0.8]["artistName"].drop_duplicates().to_list())
     
     # plot normalized minutes of top artists throughout the year
