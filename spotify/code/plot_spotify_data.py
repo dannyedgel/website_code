@@ -7,6 +7,12 @@ from os.path import join
 from glob import glob
 
 
+var_mapper = {
+    "artists": "artistName",
+    "albums": "albumName",
+    "tracks": "trackName"
+}
+
 # load data
 def load_streaming_data(path="../data", stub="endsong"):
     df = pd.concat([pd.read_json(f) for f in glob(join(path, f"{stub}*.json"))])
@@ -16,7 +22,7 @@ def load_streaming_data(path="../data", stub="endsong"):
             "ts": "endTime",
             "ms_played": "msPlayed",
             "master_metadata_album_artist_name": "artistName",
-            "master_metadata_album_name": "albumName",
+            "master_metadata_album_album_name": "albumName",
             "master_metadata_track_name": "trackName"
         }
         df = df.rename(columns=col_mapper)
@@ -25,25 +31,25 @@ def load_streaming_data(path="../data", stub="endsong"):
     
 
 # clean data
-def manipulate_streaming_data(df, year):
-    
-    # keep only 2022 data
+def manipulate_streaming_data(df, year, group):
+    variable = var_mapper[group]
+    # keep only chosen year's data
     df = df[pd.to_datetime(df["endTime"]).dt.year == year]
     
     df["date"] = pd.to_datetime(df.endTime).dt.date
     df["minutes_played"] = df.msPlayed / 1000 / 60
     
     
-    df = df.groupby(["artistName", "date"]).agg({"minutes_played": "sum"}).reset_index().sort_values(
+    df = df.groupby([variable, "date"]).agg({"minutes_played": "sum"}).reset_index().sort_values(
         ["date", "minutes_played"], ascending=[True, False])
-    df["artist_cumulative"] = df.groupby(["artistName"])["minutes_played"].cumsum()
-    df = df.complete('artistName', 'date')
-    df["artist_cumulative"] = df.groupby('artistName')['artist_cumulative'].ffill().fillna(0)
+    df["artist_cumulative"] = df.groupby([variable])["minutes_played"].cumsum()
+    df = df.complete(variable, 'date')
+    df["artist_cumulative"] = df.groupby(variable)['artist_cumulative'].ffill().fillna(0)
     df["top_artist_minutes"] = df.groupby("date")["artist_cumulative"].transform("max")
     df = df.merge(
-        df[df["artist_cumulative"] == df["top_artist_minutes"]][["date", "artistName"]].rename(
-            columns={"artistName": "top_artist"})
-    ).sort_values(["date", "artistName"])
+        df[df["artist_cumulative"] == df["top_artist_minutes"]][["date", variable]].rename(
+            columns={variable: "top_artist"})
+    ).sort_values(["date", variable])
     df["cum_norm"] = df["artist_cumulative"] / df["top_artist_minutes"]
     
     return df
@@ -51,12 +57,6 @@ def manipulate_streaming_data(df, year):
 
 # plotting function
 def plot_normalized_minutes(df, cutoff, group):
-    
-    var_mapper = {
-        "artists": "artistName",
-        "albums": "albumName",
-        "tracks": "trackName"
-    }
     
     variable = var_mapper[group]
     year = pd.to_datetime(df["date"]).dt.year.unique()[0]
@@ -84,15 +84,15 @@ def plot_normalized_minutes(df, cutoff, group):
 # main function
 def main(year, stub, path, group, cutoff):
     # load and clean streaming data
-    df = manipulate_streaming_data(load_streaming_data(stub=stub), year=year)
+    df = manipulate_streaming_data(load_streaming_data(stub=stub, path=path), year=year, group=group)
     
     # print names of artists that were ever top throughout the year
     print("\nArtists that were ever top artist:")
     print(df["top_artist"].drop_duplicates().to_list())
     
     # repeat with artists that ever reached 80% of the top artist
-    print("\nArtists that ever reached 80% of the top artist:")
-    print(df[df["cum_norm"] >= 0.8]["artistName"].drop_duplicates().to_list())
+    print(f"\n{var_mapper[group]} that ever reached 80% of the top {var_mapper[group][:-1]}:")
+    print(df[df["cum_norm"] >= 0.8][var_mapper[group]].drop_duplicates().to_list())
     
     # plot normalized minutes of top artists throughout the year
     plot_normalized_minutes(df, cutoff=cutoff, group=group)
